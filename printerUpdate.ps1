@@ -31,7 +31,7 @@ foreach ($printer in $printer_list) {
         Set-Printer -ComputerName $server -Name $printer.new -ShareName $printer.new
     }
     # set vairable to hold the new port name (FQDN)
-    $portName = "{0}.pima.edu" -f $printer.new
+    $portName = "$($printer.new).pima.edu"  
     # set variable for port existence validation
     $portExists = Get-PrinterPort -ComputerName $server -Name $portName -PrinterName $printer.new -ErrorAction SilentlyContinue
     
@@ -48,7 +48,7 @@ foreach ($printer in $printer_list) {
     if ($newPrinter) {
         # add printer to updated list
         $updatedPrinters += $newPrinter
-        Write-Host "{0} was added to the {0} print server successfully!" -ForegroundColor Green
+        Write-Host "$($printer.new) was added to the $($server) print server successfully!" -ForegroundColor Green
     }
     else {
         # error if updated printer is not found
@@ -61,7 +61,7 @@ foreach ($printer in $updatedPrinters) {
     [PSCustomObject] @{
         Name = $printer.name
         ComputerName = $printer.ComputerName
-        ShareName = $printe.ShareName
+        ShareName = $printer.ShareName
         DriverName = $printer.DriverName
         PortName = $printer.PortName
         } | Export-Csv "C:\Users\*USERNAME*\Documents\*FILENAME*.csv" -notype -Append
