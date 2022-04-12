@@ -30,22 +30,22 @@ foreach ($printer in $printer_list) {
         # update existing printer object with new share name 
         Set-Printer -ComputerName $server -Name $printer.new -ShareName $printer.new
     }
-    # set vairable to hold the new port name (FQDN)
-    $portName = "$($printer.new).pima.edu"  
-    # set variable for port existence validation
-    $portExists = Get-PrinterPort -ComputerName $server -Name $portName -PrinterName $printer.new -ErrorAction SilentlyContinue
-    
-    # Check if port already exists on the server
-    if (-not $portExists) {
-        # if port does not already exist, create it
-        Add-PrinterPort -ComputerName $server -Name $portName -PrinterName $printer.new  
-    }
-
     # set variable for updated printer
     $newPrinter = Get-Printer -ComputerName $server -Name $printer.new
-    
+
     # validate the printer is updated after setting changes
     if ($newPrinter) {
+        # set vairable to hold the new port name (FQDN)
+        $portName = "$($printer.new).pima.edu"  
+        # set variable for port existence validation
+        $portExists = Get-PrinterPort -ComputerName $server -Name $portName -PrinterName $printer.new -ErrorAction SilentlyContinue
+    
+        # Check if port already exists on the server
+        if (-not $portExists) {
+            # if port does not already exist, create it
+            Add-PrinterPort -ComputerName $server -Name $portName -PrinterName $printer.new  
+        }
+
         # add printer to updated list
         $updatedPrinters += $newPrinter
         Write-Host "$($printer.new) was added to the $($server) print server successfully!" -ForegroundColor Green
