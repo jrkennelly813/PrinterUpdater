@@ -5,14 +5,16 @@
 # Will need to be run as admin w/ proper credentials to reach servers (Especially if ran locally)
 
 # Set the file path to the 2-column CSV containing new/old printer names 
-$filePath = "C:\Users\*USERNAME*\Documents\*FILENAME*.csv"
+# UPDATE FILEPATH BEFORE RUNNING
+$filePath = "C:\Users\wadmin_jrkennelly\Documents\DV_EDU_PList.csv"
 
 # Import printer data
 $printer_list = Import-Csv  $filePath
 
 # Optional - This is used if you are attempting 
 # to run the script locally and not on the target print server
-$server = read-Host "Enter the print server name: "
+$prompt = read-Host "Enter the print server name: "
+$server = "\\$($prompt)"
 
 # Array to hold the successfully updated printers
 $updatedPrinters = @()
@@ -20,50 +22,42 @@ $updatedPrinters = @()
 # Iterate through the printer csv data
 foreach ($printer in $printer_list) {
     # set a variable for each "new" printer for validation
-    $printerExists = Get-Printer -ComputerName -Name $printer.new -ErrorAction SilentlyContinue
+    $printerExists = Get-Printer -ComputerName $server -Name $printer.new -ErrorAction SilentlyContinue
+    # set vairable to hold the new port name (FQDN)
+    $portName = "$($printer.new).pima.edu" 
 
     # check to see if "new" printer is already on the server
-    # If it does not already exist, continue creating
+    # If it does not already exist, continue updating
     if (-not $printerExists) {
         # rename existing old printer name to the new printer name
-        Get-Printer -ComputerName $server -Name $printer.old | Rename-Printer -NewName $printer.new 
-        # update existing printer object with new share name 
-        Set-Printer -ComputerName $server -Name $printer.new -ShareName $printer.new
-    }
-    # set variable for updated printer
-    $newPrinter = Get-Printer -ComputerName $server -Name $printer.new
-
-    # validate the printer is updated after setting changes
-    if ($newPrinter) {
-        # set vairable to hold the new port name (FQDN)
-        $portName = "$($printer.new).pima.edu"  
-        # set variable for port existence validation
-        $portExists = Get-PrinterPort -ComputerName $server -Name $portName -PrinterName $printer.new -ErrorAction SilentlyContinue
-    
-        # Check if port already exists on the server
-        if (-not $portExists) {
-            # if port does not already exist, create it
-            Add-PrinterPort -ComputerName $server -Name $portName -PrinterName $printer.new  
+        if (Get-Printer -ComputerName $server -Name $printer.old | Rename-Printer -NewName $printer.new) {
+            Write-Host "$($printer.old) name changed to ---> $($printer.new)" -ForegroundColor Green
         }
-
+        if (Set-Printer -ComputerName $server -Name $printer.new -ShareName $printer.new) {
+            Write-Host "$($printer.old) share name changed to ---> $($printer.new)" -ForegroundColor Green
+        }
+        
         # add printer to updated list
-        $updatedPrinters += $newPrinter
-        Write-Host "$($printer.new) was added to the $($server) print server successfully!" -ForegroundColor Green
+        if ($updatedPrinters += $newPrinter) {
+            Write-Host "$($printer.new) was added to the $($server) print server successfully!" -ForegroundColor Cyan
+        }
     }
     else {
-        # error if updated printer is not found
-        Write-Host "The printer was not updated..." -ForegroundColor Red
+        Write-Host "<---------- Print Queue up to date! ---------->" -ForegroundColor Cyan
     }
-}
-
+} 
 # Iterate through successfully updated printers and export info to a csv
 foreach ($printer in $updatedPrinters) {
+    if (Add-PrinterPort -ComputerName $server -Name $portName -PrinterHostAddress $portName -SNMP $true) {
+        Write-Host "New port configured ---> $($portName)" -ForegroundColor Green
+    }
     [PSCustomObject] @{
         Name = $printer.name
         ComputerName = $printer.ComputerName
         ShareName = $printer.ShareName
         DriverName = $printer.DriverName
         PortName = $printer.PortName
-        } | Export-Csv "C:\Users\*USERNAME*\Documents\*FILENAME*.csv" -notype -Append
+        # UPDATE FILEPATH BEFORE RUNNING
+        } | Export-Csv "C:\Users\wadmin_jrkennelly\Documents\DV_EDU_PrintUpdate.csv" -notype -Append
 }
 
